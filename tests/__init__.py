@@ -1,1 +1,1 @@
-"""Test package for uwuchat-auth-core."""
+"""Tests for capsize-auth."""
