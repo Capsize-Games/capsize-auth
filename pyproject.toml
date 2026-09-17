@@ -50,6 +50,12 @@ Issues = "https://github.com/capsize-games/capsize-auth/issues"
 [tool.setuptools.packages.find]
 where = ["src"]
 
+# The package is mypy --strict clean, so the marker is a claim it can keep.
+# Without it every consumer sees this library's types as Any, which silently
+# turns their own strict checks into no checks at all.
+[tool.setuptools.package-data]
+capsize_auth = ["py.typed"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
