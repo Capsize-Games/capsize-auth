@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 jobs:
-  check:
+  check-python:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -34,3 +34,17 @@ jobs:
 
       - name: Tests
         run: pytest -q
+
+  # Branch protection requires the stable `check` context. Keep the
+  # versioned jobs above as the compatibility matrix, then publish one
+  # aggregate result for merge protection.
+  check:
+    if: ${{ always() }}
+    needs: [check-python]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every Python check
+        if: ${{ needs.check-python.result != 'success' }}
+        run: exit 1
+      - name: Matrix passed
+        run: echo "All Python matrix checks passed"
