@@ -1,5 +1,13 @@
 # capsize-auth
 
+## Fleet boundary
+
+This package owns authentication policy: password verification, token claims,
+OAuth provider mappings, PKCE, and security-sensitive error behavior. Hosts
+own account storage, secret delivery, sessions, web integration, and logging.
+The support matrix and release gate are documented in
+[`docs/FLEET_CONSOLIDATION.md`](docs/FLEET_CONSOLIDATION.md).
+
 Authentication primitives for Python applications: argon2id password hashing
 and a strength policy, signed JWTs and opaque revocable tokens, and the OAuth2
 authorization-code flow with PKCE against any provider.
