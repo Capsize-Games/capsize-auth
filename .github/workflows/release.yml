@@ -1,0 +1,87 @@
+name: release
+
+on:
+  push:
+    tags: ["v*.*.*"]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: SemVer candidate used by a dry-run
+        required: true
+        default: "0.1.0"
+        type: string
+      dry-run:
+        description: Build and verify without publishing
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: build Python distribution
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Resolve and validate version
+        id: version
+        shell: bash
+        run: |
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            expected="${GITHUB_REF_NAME#v}"
+          else
+            expected="${{ inputs.version }}"
+          fi
+          actual="$(python - <<'PY'
+          import tomllib
+          with open("pyproject.toml", "rb") as stream:
+              print(tomllib.load(stream)["project"]["version"])
+          PY
+          )"
+          test "$actual" = "$expected" || {
+            echo "pyproject version $actual does not match release version $expected" >&2
+            exit 1
+          }
+          printf 'value=%s\n' "$actual" >> "$GITHUB_OUTPUT"
+      - name: Install test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]" build
+      - name: Lint
+        run: ruff check .
+      - name: Types
+        run: mypy src/capsize_auth
+      - name: Tests
+        run: pytest -q
+      - name: Build wheel and source distribution
+        run: python -m build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: python-dist
+          path: dist/*
+          if-no-files-found: error
+
+  publish:
+    name: publish to PyPI
+    if: startsWith(github.ref, 'refs/tags/v') && inputs.dry-run != true
+    needs: build
+    runs-on: ubuntu-latest
+    environment: pypi
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: python-dist
+          path: dist
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist/
